@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let messageHistory = [];
 
     // --- Function to Add Message to UI ---
+    // (No changes needed in this function from the last version)
     function addMessageToUI(sender, text, applyMarkdown = false) {
         if (welcomeMessage && messagesContainer.children.length <= 1) {
              messagesContainer.style.justifyContent = 'flex-start';
@@ -21,9 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (applyMarkdown) {
             let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            messageDiv.innerHTML = formattedText;
+            // Ensure HTML entities are handled if mixing textContent and innerHTML later
+            // A more robust solution might use a Markdown library
+             messageDiv.innerHTML = formattedText;
         } else {
-            messageDiv.textContent = text;
+            messageDiv.textContent = text; // Preserves spaces/newlines for CSS
         }
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -32,9 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
      // --- Function using Fetch for POST and Stream Processing ---
      async function handleChatStreamWithFetch(history) {
-        let lastBotMessageDiv = addMessageToUI('bot', '');
+        let lastBotMessageDiv = addMessageToUI('bot', ''); // Add placeholder
         if (!lastBotMessageDiv) return;
         let currentContent = '';
+        // --- WORKAROUND FLAG ---
+        let previousChunkEndedWithSpace = true; // Assume start requires no preceding space
 
         try {
             const response = await fetch('/api/chat', {
@@ -59,33 +64,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        const data = line.substring(6).trim();
-                        // --- ADDED CONSOLE LOG ---
-                        console.log("Raw Chunk:", JSON.stringify(data)); // Log the raw data chunk to see spaces
+                        // Get content, trim leading/trailing whitespace JUST IN CASE API adds some inconsistently
+                        let data = line.substring(6).trim();
+                        // console.log("Raw Chunk:", JSON.stringify(data)); // Keep for debugging if needed
 
                          if (data.startsWith("[Error]")) {
                             currentContent += data;
                             lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${currentContent}</span>`;
                             throw new Error("Backend Error Received");
                          }
+
+                         if (data.length === 0) continue; // Skip empty chunks
+
+                        // --- WORKAROUND LOGIC ---
+                        // If the accumulated content is not empty,
+                        // AND the previous chunk didn't end with whitespace,
+                        // AND the current chunk doesn't start with whitespace (or common punctuation that shouldn't have preceding space)
+                        // THEN add a space.
+                        const punctuationRegex = /^[.,!?;:)\-"”']/; // Characters that usually don't need a space before them
+                        if (currentContent.length > 0 && !/\s$/.test(currentContent) && !/^\s/.test(data) && !punctuationRegex.test(data)) {
+                             currentContent += ' '; // Add space BEFORE appending new data
+                         }
+                        // --- END WORKAROUND LOGIC ---
+
                         currentContent += data;
                         lastBotMessageDiv.textContent = currentContent; // Update using textContent
+
+                         // Update flag for next iteration (check if the raw data chunk ended with space)
+                         // We use the non-trimmed line data for this check if available, otherwise 'data'
+                         const rawLineData = line.substring(6); // Data before trim()
+                         previousChunkEndedWithSpace = /\s$/.test(rawLineData);
+
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     }
                 }
             }
             // AFTER STREAM: Apply Markdown
             if (currentContent.trim() && !currentContent.startsWith("[Error]")) {
-                let formattedHTML = currentContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                formattedHTML = formattedHTML.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                lastBotMessageDiv.innerHTML = formattedHTML; // Update with formatting
+                // Apply Markdown formatting after the full text is assembled
+                addMessageToUI('assistant', currentContent.trim(), true); // Create new div with formatting
+                lastBotMessageDiv.remove(); // Remove the placeholder div
                 messageHistory.push({ role: 'assistant', content: currentContent.trim() });
+            } else if (currentContent.trim().startsWith("[Error]")) {
+                 // If it ended with an error, update history if needed (optional)
+                 // messageHistory.push({ role: 'assistant', content: currentContent.trim() });
+                 // Update the placeholder div with final error styling if not already done
+                  if (!lastBotMessageDiv.innerHTML.includes('color: #ff5555;')) {
+                       lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${currentContent}</span>`;
+                  }
+
+            } else {
+                 // If stream finished but produced no content, remove placeholder
+                 lastBotMessageDiv.remove();
             }
+
         } catch (error) {
             console.error("Fetch stream failed:", error);
             const errorMsg = `[Stream Connection Error: ${error.message}]`;
+             // Update placeholder or add new message for connection errors
             if (lastBotMessageDiv && !lastBotMessageDiv.innerHTML.includes('color: #ff5555;')) {
-                 lastBotMessageDiv.innerHTML += `<br><span style="color: #ff5555;">${errorMsg}</span>`;
+                // Append only if no backend error was already displayed in the div
+                lastBotMessageDiv.innerHTML += (lastBotMessageDiv.textContent.length > 0 ? '<br>' : '') + `<span style="color: #ff5555;">${errorMsg}</span>`;
             } else if (!lastBotMessageDiv) {
                  addMessageToUI('bot', `<span style="color: #ff5555;">${errorMsg}</span>`);
             }
@@ -97,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listener for Sending Message ---
+    // (No changes needed in this function from the last version)
     async function sendMessage(event) {
         event.preventDefault();
         const userText = messageInput.value.trim();
@@ -125,4 +165,5 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
 });
