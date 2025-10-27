@@ -45,6 +45,7 @@ body {
     flex-wrap: wrap;
 }
 
+/* Logo style is kept in case user adds it back */
 .logo {
     height: 30px;
     margin-right: 10px;
@@ -180,12 +181,42 @@ body {
 
 .main-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-between; /* Keeps structure if right side is empty */
     align-items: center;
     padding: 20px 0;
     height: 40px;
     flex-shrink: 0; /* Prevent header shrinking */
 }
+
+/* Styles for header actions buttons (kept in case they are added back) */
+.header-actions button {
+    background: none;
+    border: 1px solid var(--text-muted);
+    color: var(--text-light);
+    padding: 6px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.header-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.header-actions button:hover:not(:disabled) {
+    background-color: var(--input-bg);
+    border-color: var(--text-light);
+}
+.header-actions .btn-signup {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+.header-actions .btn-signup:hover:not(:disabled) {
+    background-color: rgba(184, 154, 95, 0.1);
+    border-color: var(--accent-gold);
+}
+
 
 .chat-area {
     flex-grow: 1;
@@ -203,22 +234,23 @@ body {
     padding: 20px 10px 20px 0; /* Add padding, especially right for scrollbar */
     display: flex;
     flex-direction: column;
-    /* align-items: center; Remove this - messages align left/right */
-    /* justify-content: center; Remove this - messages start top */
     scrollbar-width: thin;
     scrollbar-color: #444 var(--bg-dark);
 }
 
-/* Keep justify-content default (flex-start) */
+/* Align messages top */
+.messages:not(:empty) {
+    justify-content: flex-start;
+}
 
 .welcome-message {
     font-size: 1.8em;
     font-weight: 500;
     color: var(--text-light);
-    margin: auto; /* Center vertically and horizontally */
+    margin: auto; /* Center vertically and horizontally if messages are empty */
     padding-bottom: 100px;
     text-align: center;
-    align-self: center; /* Ensure centering within flex container */
+    align-self: center;
 }
 
 
@@ -229,12 +261,12 @@ body {
     border-radius: 12px;
     margin-bottom: 10px;
     line-height: 1.5;
-    /* --- CRITICAL FIXES --- */
-    white-space: pre-wrap;     /* Respect spaces and newlines */
-    overflow-wrap: break-word; /* Break long words/text */
-    word-break: break-word;    /* Alternative breaking */
-    /* --- Ensure it doesn't try to shrink --- */
-    flex-shrink: 0;
+    /* --- CRITICAL SPACING & WRAPPING FIXES --- */
+    white-space: pre-wrap;     /* Respect spaces & newlines */
+    overflow-wrap: break-word; /* Break long words if necessary */
+    word-break: break-word;    /* Helps break words/text to prevent overflow */
+    /* ----------------------------------------- */
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .user-message {
@@ -259,7 +291,7 @@ body {
     align-items: center;
     background-color: var(--accent-gold);
     border-radius: 30px;
-    padding: 5px 5px 5px 15px;
+    padding: 5px 5px 5px 15px; /* Adjusted padding */
     margin: 20px auto 10px auto;
     width: 100%;
     max-width: 700px;
@@ -279,6 +311,20 @@ body {
 }
 .input-container input[type="text"]::placeholder {
     color: rgba(31, 63, 74, 0.7);
+}
+
+/* Styles for removed elements (harmless but kept for reference if added back) */
+.input-container select {
+     /* Style rules for select if it were present */
+     opacity: 0.6;
+     cursor: not-allowed;
+     /* etc. */
+}
+.input-container .btn-add {
+     /* Style rules for btn-add if it were present */
+     opacity: 0.6;
+     cursor: not-allowed;
+     /* etc. */
 }
 
 .input-container .btn-send {
@@ -317,10 +363,14 @@ body {
     width: 8px; /* Slightly wider */
 }
 ::-webkit-scrollbar-track {
-    background: transparent;
+    background: transparent; /* Track matches main background */
 }
 ::-webkit-scrollbar-thumb {
-    background-color: #444;
+    background-color: #444; /* Scrollbar color */
     border-radius: 10px;
     border: 2px solid var(--bg-dark); /* Add border to match bg */
+}
+/* Scrollbar for messages area specific */
+.messages::-webkit-scrollbar-thumb {
+    border: 2px solid var(--bg-dark); /* Ensure thumb border matches chat area background */
 }
