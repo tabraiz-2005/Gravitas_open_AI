@@ -13,18 +13,17 @@
     <div class="app-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <img src="/static/logo.png" alt="Gravitas Logo" class="logo">  <span class="logo-text">GRAVITAS <span class="ai-tag">AI</span></span>
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Gravitas Logo" class="logo">
+                <span class="logo-text">GRAVITAS <span class="ai-tag">AI</span></span>
                 <span class="version-tag">Version 0.1</span>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active"><span class="icon">&#43;</span> New chat</a>
-                <a href="#" class="nav-item"><span class="icon">&#x1F50D;</span> Search chat</a>
-                <a href="#" class="nav-item"><span class="icon">&#x1F4D8;</span> Library</a>
-                <a href="#" class="nav-item"><span class="icon">&#x1F4C1;</span> Projects</a>
             </nav>
             <div class="chats-section">
                 <h3 class="chats-title">Chats</h3>
-                </div>
+                <p style="padding-left: 15px; color: var(--text-muted); font-size: 0.9em;">(Chat history requires backend)</p>
+            </div>
             <div class="sidebar-footer">
                 <div class="user-profile">
                     <span class="user-avatar">J</span>
@@ -39,8 +38,8 @@
         <main class="main-content">
             <header class="main-header">
                 <div></div> <div class="header-actions">
-                    <button class="btn-signup">Sign up</button>
-                    <button class="btn-signin">Sign in</button>
+                    <button class="btn-signup" disabled title="Signup not implemented">Sign up</button>
+                    <button class="btn-signin" disabled title="Signin not implemented">Sign in</button>
                 </div>
             </header>
 
@@ -50,20 +49,20 @@
                      </div>
 
                  <form id="chatForm" class="input-container">
-                    <button type="button" class="btn-add">+</button>
+                    <button type="button" class="btn-add" title="Functionality not implemented">+</button>
                     <input type="text" id="messageInput" placeholder="Ask Anything" autocomplete="off">
-                    <select class="model-selector">
+                    <select class="model-selector" title="Model selection not implemented">
                         <option>Auto</option>
                         </select>
                     <button type="submit" id="sendButton" class="btn-send">&uarr;</button>
                 </form>
             </div>
              <footer class="footer">
-                 © 2025 GravitasGPT • Executive Presence AI </footer>
+                 © 2025 GravitasGPT • Executive Presence AI
+             </footer>
         </main>
     </div>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
-    
 </body>
 </html>
