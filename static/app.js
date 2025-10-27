@@ -4,15 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     const chatForm = document.getElementById('chatForm');
-    const welcomeMessage = document.querySelector('.welcome-message'); // Get the welcome message element
+    // --- ADDED --- Get the welcome message element
+    const welcomeMessage = document.querySelector('.welcome-message');
 
     // --- State ---
     let messageHistory = []; // Store the conversation history
 
     // --- Function to Add Message to UI ---
     function addMessageToUI(sender, text) {
-        // Hide welcome message if it exists and this is the first real message
+        // --- ADDED --- Hide welcome message if it exists and this is the first real message bubble being added
         if (welcomeMessage && messagesContainer.children.length <= 1) { // <=1 because the bot placeholder gets added first
+            // Ensure the container allows messages to align top now
+             messagesContainer.style.justifyContent = 'flex-start';
              welcomeMessage.style.display = 'none';
         }
 
@@ -23,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Basic Markdown support
         let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        formattedText = formattedText.replace(/\n/g, '<br>');
+        formattedText = formattedText.replace(/\n/g, '<br>'); // Handles newlines (works with CSS white-space: pre-wrap)
 
         messageDiv.innerHTML = formattedText;
         messagesContainer.appendChild(messageDiv);
@@ -34,9 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
      // --- Function using Fetch for POST and Stream Processing ---
      async function handleChatStreamWithFetch(history) {
-        addMessageToUI('bot', ''); // Add placeholder
+        addMessageToUI('bot', ''); // Add placeholder bot message bubble
         let lastBotMessageDiv = messagesContainer.querySelector('.bot-message:last-child');
-        if (!lastBotMessageDiv) return;
+        if (!lastBotMessageDiv) return; // Safety check
 
         try {
             const response = await fetch('/api/chat', {
@@ -48,13 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                 const errorText = await response.text(); // Try to get error text from backend
+                 throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
             }
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
-            let currentHTML = ''; // Accumulate HTML within the stream
+            let currentContent = ''; // Accumulate raw text content for history
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -64,25 +68,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Process buffer line by line for SSE format ("data: ...\n\n")
                 let lines = buffer.split('\n\n');
-                buffer = lines.pop(); // Keep the last partial line in buffer
+                buffer = lines.pop() || ''; // Keep the last partial line in buffer, handle empty buffer case
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
                         const data = line.substring(6).trim(); // Remove "data: " prefix
 
                          if (data.startsWith("[Error]")) {
-                            currentHTML += `<span style="color: #ff5555;">${data}</span>`;
-                            lastBotMessageDiv.innerHTML = currentHTML; // Update with error
+                            currentContent += data; // Add error to content display
+                            let formattedError = `<span style="color: #ff5555;">${data}</span>`;
+                            lastBotMessageDiv.innerHTML = formattedError; // Display error
                             throw new Error("Backend Error Received"); // Stop processing
                          }
 
-                        // Append raw data to accumulator
-                        currentHTML += data;
+                        // Append raw data to accumulator for history
+                        currentContent += data;
 
-                        // Apply basic Markdown and newline formatting to the accumulated text
-                        let formattedHTML = currentHTML.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        // Apply basic Markdown and newline formatting to the accumulated text for display
+                        let formattedHTML = currentContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                         formattedHTML = formattedHTML.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                        formattedHTML = formattedHTML.replace(/\n/g, '<br>');
+                        formattedHTML = formattedHTML.replace(/\n/g, '<br>'); // Let CSS handle spacing with pre-wrap
 
                         lastBotMessageDiv.innerHTML = formattedHTML; // Update the DOM
 
@@ -90,20 +95,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-             // Add the final bot message to history after streaming is complete
-             if (lastBotMessageDiv.textContent.trim()) {
-                messageHistory.push({ role: 'assistant', content: lastBotMessageDiv.textContent.trim() });
+             // --- MODIFIED --- Add the final bot message text to history after streaming
+             if (currentContent.trim()) {
+                messageHistory.push({ role: 'assistant', content: currentContent.trim() });
              }
 
 
         } catch (error) {
             console.error("Fetch stream failed:", error);
-            if(lastBotMessageDiv){
-                 // Append error to the existing placeholder if possible
-                 lastBotMessageDiv.innerHTML += `<br><span style="color: #ff5555;">[Stream Connection Error]</span>`;
-            } else {
-                 // Or add a new message bubble just for the error
-                 addMessageToUI('bot', `<span style="color: #ff5555;">[Stream Connection Error]</span>`);
+            const errorMsg = `[Stream Connection Error: ${error.message}]`;
+            if(lastBotMessageDiv && lastBotMessageDiv.innerHTML.trim() === ''){
+                 // If placeholder is empty, put error inside it
+                 lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${errorMsg}</span>`;
+            } else if (lastBotMessageDiv) {
+                 // Append error after existing content if stream partially worked
+                 lastBotMessageDiv.innerHTML += `<br><span style="color: #ff5555;">${errorMsg}</span>`;
+            }
+             else {
+                 // Or add a new message bubble just for the error if placeholder failed
+                 addMessageToUI('bot', `<span style="color: #ff5555;">${errorMsg}</span>`);
             }
         } finally {
             // Re-enable input after stream ends or errors
@@ -131,7 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sendButton.disabled = true;
 
         // Start processing the chat stream using Fetch
-        await handleChatStreamWithFetch(messageHistory);
+        // Pass a copy of the history to avoid potential race conditions if needed
+        await handleChatStreamWithFetch([...messageHistory]);
 
         // Note: Re-enabling is done in the finally block of handleChatStreamWithFetch
     }
@@ -147,11 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter' && !e.shiftKey) { // Send on Enter, allow Shift+Enter for newline
                 e.preventDefault(); // Prevent newline in input
                 if (!sendButton.disabled) { // Only send if not already waiting
-                     // Directly call sendMessage, ensuring the event object is passed if needed,
-                     // or create a new event if the handler relies on it.
-                     // Since sendMessage uses event.preventDefault(), create a relevant event.
                      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-                     sendMessage(submitEvent);
+                     chatForm.dispatchEvent(submitEvent); // Dispatch submit on the form
                 }
             }
         });
