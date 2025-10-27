@@ -7,13 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const welcomeMessage = document.querySelector('.welcome-message');
 
     // --- State ---
-    let messageHistory = []; // Store the conversation history
+    let messageHistory = [];
 
     // --- Function to Add Message to UI ---
-    function addMessageToUI(sender, text) {
+    function addMessageToUI(sender, text, applyMarkdown = false) { // Added applyMarkdown flag
         // Hide welcome message
         if (welcomeMessage && messagesContainer.children.length <= 1) {
-             messagesContainer.style.justifyContent = 'flex-start'; // Align messages top
+             messagesContainer.style.justifyContent = 'flex-start';
              welcomeMessage.style.display = 'none';
         }
 
@@ -21,34 +21,34 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.classList.add('message');
         messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
 
-        // Basic Markdown support (Bold/Italic)
-        // Let CSS handle newlines via 'white-space: pre-wrap;'
-        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-        // Use innerHTML because we added Markdown formatting
-        messageDiv.innerHTML = formattedText;
-        // If no markdown support needed, safer to use:
-        // messageDiv.textContent = text;
+        if (applyMarkdown) {
+            // Apply basic Markdown AFTER text is complete
+            let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            messageDiv.innerHTML = formattedText; // Use innerHTML only when applying formatting
+        } else {
+             // Directly set textContent for streaming or user messages
+             // This correctly preserves all spaces and newlines for CSS to handle
+            messageDiv.textContent = text;
+        }
 
         messagesContainer.appendChild(messageDiv);
-
-        // Scroll to the bottom
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to bottom
+        return messageDiv; // Return the created div
     }
 
      // --- Function using Fetch for POST and Stream Processing ---
      async function handleChatStreamWithFetch(history) {
-        addMessageToUI('bot', ''); // Add placeholder
-        let lastBotMessageDiv = messagesContainer.querySelector('.bot-message:last-child');
+        // Add placeholder using textContent initially
+        let lastBotMessageDiv = addMessageToUI('bot', '');
         if (!lastBotMessageDiv) return;
+
+        let currentContent = ''; // Accumulate raw text
 
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages: history })
             });
 
@@ -60,14 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
-            let currentContent = ''; // Accumulate raw text
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
-
                 let lines = buffer.split('\n\n');
                 buffer = lines.pop() || '';
 
@@ -76,40 +74,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = line.substring(6).trim();
 
                          if (data.startsWith("[Error]")) {
-                            currentContent += data;
-                            let formattedError = `<span style="color: #ff5555;">${data}</span>`;
-                            lastBotMessageDiv.innerHTML = formattedError;
+                            currentContent += data; // Accumulate error text
+                            lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${currentContent}</span>`; // Display final error
                             throw new Error("Backend Error Received");
                          }
 
                         currentContent += data;
-
-                        // Apply Markdown formatting to the accumulated text
-                        let formattedHTML = currentContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                        formattedHTML = formattedHTML.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                        // REMOVED explicit <br> replacement - let CSS handle newlines
-
-                        lastBotMessageDiv.innerHTML = formattedHTML; // Update the DOM
-
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        // Update textContent during stream - preserves spaces/newlines
+                        lastBotMessageDiv.textContent = currentContent;
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Keep scrolling
                     }
                 }
             }
-             // Add the final bot message text to history
-             if (currentContent.trim()) {
+
+            // --- AFTER STREAM: Apply Markdown ---
+            if (currentContent.trim() && !currentContent.startsWith("[Error]")) {
+                let formattedHTML = currentContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                formattedHTML = formattedHTML.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                lastBotMessageDiv.innerHTML = formattedHTML; // Update with formatting
+
                 messageHistory.push({ role: 'assistant', content: currentContent.trim() });
-             }
+            } else if (currentContent.trim()) {
+                 // If it ended with an error, ensure history reflects that if desired (optional)
+                 // messageHistory.push({ role: 'assistant', content: currentContent.trim() });
+            }
 
 
         } catch (error) {
             console.error("Fetch stream failed:", error);
             const errorMsg = `[Stream Connection Error: ${error.message}]`;
-            if(lastBotMessageDiv && lastBotMessageDiv.innerHTML.trim() === ''){
-                 lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${errorMsg}</span>`;
-            } else if (lastBotMessageDiv) {
-                 lastBotMessageDiv.innerHTML += `<br><span style="color: #ff5555;">${errorMsg}</span>`;
-            }
-             else {
+            // Ensure error is displayed, even if streaming stopped early
+            if (lastBotMessageDiv) {
+                // Append error only if there wasn't a backend error already shown
+                if (!lastBotMessageDiv.innerHTML.includes('color: #ff5555;')) {
+                     lastBotMessageDiv.innerHTML += `<br><span style="color: #ff5555;">${errorMsg}</span>`;
+                }
+            } else {
                  addMessageToUI('bot', `<span style="color: #ff5555;">${errorMsg}</span>`);
             }
         } finally {
@@ -124,10 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listener for Sending Message ---
     async function sendMessage(event) {
         event.preventDefault();
-
         const userText = messageInput.value.trim();
         if (!userText) return;
 
+        // Add user message using textContent (no markdown needed for user input)
         addMessageToUI('user', userText);
         messageHistory.push({ role: 'user', content: userText });
 
