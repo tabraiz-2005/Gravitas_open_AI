@@ -1,0 +1,133 @@
+/* --- Base Styles & Background --- */
+body {
+    background-color: #0a0a0a; /* Deep black background */
+    color: #e0e0e0; /* Light grey text for readability */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Professional font */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* --- Main Chat Container --- */
+.chat-container {
+    width: 100%;
+    max-width: 800px; /* Adjust as needed */
+    height: 90vh; /* Adjust height */
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Needed for spotlight positioning */
+    background-color: transparent; /* Container is transparent */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* --- The Chat Card & Spotlight --- */
+.chat-card {
+    background-color: #1a1a1a; /* Very dark grey card */
+    border-radius: 12px;
+    box-shadow:
+        0 0 40px 10px rgba(255, 215, 0, 0.15), /* Outer gold glow (spotlight) */
+        0 4px 15px rgba(0, 0, 0, 0.5);        /* Standard card shadow for depth */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Keep content within rounded corners */
+    position: relative; /* Ensure card is above any potential background elements */
+    transition: box-shadow 0.4s ease-in-out; /* Subtle motion on shadow */
+}
+
+/* Optional: Slightly enhance glow on hover/focus within */
+.chat-card:hover,
+.chat-card:focus-within {
+     box-shadow:
+        0 0 60px 15px rgba(255, 215, 0, 0.25), /* Brighter gold glow */
+        0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+
+/* --- Message Area --- */
+.messages {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto; /* Allow scrolling for messages */
+    scrollbar-width: thin;
+    scrollbar-color: #444 #1a1a1a;
+}
+
+/* Style individual messages (example) */
+.message {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    max-width: 80%;
+}
+
+.user-message {
+    background-color: #333;
+    color: #f0f0f0;
+    margin-left: auto; /* Align user messages to the right */
+}
+
+.bot-message {
+    background-color: #252525;
+    color: #e0e0e0;
+    margin-right: auto; /* Align bot messages to the left */
+}
+
+/* --- Input Area --- */
+.input-area {
+    display: flex;
+    padding: 15px;
+    border-top: 1px solid #333; /* Separator line */
+    background-color: #1a1a1a; /* Match card background */
+}
+
+.input-area input[type="text"] {
+    flex-grow: 1;
+    padding: 12px 15px;
+    border: 1px solid #444;
+    border-radius: 20px; /* Pill shape */
+    background-color: #252525;
+    color: #e0e0e0;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Subtle focus motion */
+}
+
+.input-area input[type="text"]:focus {
+    border-color: #ffd700; /* Gold border on focus */
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); /* Gold glow on focus */
+}
+
+.input-area button {
+    background-color: #ffd700; /* Gold button */
+    color: #1a1a1a; /* Dark text */
+    border: none;
+    padding: 0 20px;
+    margin-left: 10px;
+    border-radius: 20px; /* Pill shape */
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background-color 0.3s ease, transform 0.1s ease; /* Motion */
+}
+
+.input-area button:hover {
+    background-color: #e6c300; /* Slightly darker gold on hover */
+}
+
+.input-area button:active {
+    transform: scale(0.98); /* Click effect */
+}
+
+/* --- Footer --- */
+.footer {
+    text-align: center;
+    margin-top: 15px; /* Space above footer */
+    font-size: 0.8rem;
+    color: #777; /* Dim color */
+}

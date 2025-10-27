@@ -1,0 +1,15 @@
+<<<<<<< HEAD
+flask
+flask-cors
+gunicorn
+python-dotenv
+openai>=1.0.0
+groq>=0.5.0
+=======
+flask==3.0.3
+flask-cors==4.0.1
+python-dotenv==1.0.1
+openai>=1.0.0    # <-- STABLE VERSION (no proxy bug)
+groq==0.5.0
+gunicorn==21.2.0
+>>>>>>> adc8da063d4cd02bd7c5f7cffedafea6f9084ef7
