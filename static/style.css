@@ -35,17 +35,18 @@ body {
     padding: 20px;
     box-sizing: border-box;
     border-right: 1px solid var(--border-color);
+    flex-shrink: 0; /* Prevent sidebar from shrinking */
 }
 
 .sidebar-header {
     margin-bottom: 30px;
     display: flex;
     align-items: center;
-    flex-wrap: wrap; /* Allow wrapping if needed */
+    flex-wrap: wrap;
 }
 
 .logo {
-    height: 30px; /* Adjust size */
+    height: 30px;
     margin-right: 10px;
 }
 .logo-text {
@@ -85,7 +86,7 @@ body {
 .nav-item .icon {
     margin-right: 10px;
     font-size: 1.1em;
-    width: 20px; /* Ensure alignment */
+    width: 20px;
     text-align: center;
 }
 
@@ -101,9 +102,23 @@ body {
 }
 
 .chats-section {
-    flex-grow: 1; /* Pushes footer down */
-    overflow-y: auto; /* Allow scrolling for many chats */
+    flex-grow: 1;
+    overflow-y: auto;
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: #444 var(--bg-sidebar); /* For Firefox */
 }
+/* Webkit scrollbar for chats */
+.chats-section::-webkit-scrollbar {
+    width: 6px;
+}
+.chats-section::-webkit-scrollbar-track {
+    background: transparent;
+}
+.chats-section::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 10px;
+}
+
 
 .chats-title {
     color: var(--text-muted);
@@ -114,7 +129,7 @@ body {
 }
 
 .sidebar-footer {
-    margin-top: auto; /* Pushes to bottom */
+    margin-top: auto;
     padding-top: 20px;
     border-top: 1px solid var(--border-color);
 }
@@ -158,57 +173,26 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
-    padding: 0 40px 20px 40px; /* Padding around content */
+    padding: 0 40px 20px 40px;
     box-sizing: border-box;
+    overflow: hidden; /* Prevent main content from causing body scroll */
 }
 
 .main-header {
     display: flex;
-    justify-content: space-between; /* Keeps structure if right side is empty */
+    justify-content: space-between;
     align-items: center;
-    padding: 20px 0; /* Vertical padding only */
-    height: 40px; /* Fixed height */
+    padding: 20px 0;
+    height: 40px;
+    flex-shrink: 0; /* Prevent header shrinking */
 }
-
-/* Styles for header actions buttons (if any were kept) */
-.header-actions button {
-    background: none;
-    border: 1px solid var(--text-muted);
-    color: var(--text-light);
-    padding: 6px 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    margin-left: 10px;
-    font-size: 0.9em;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-/* Style disabled buttons differently */
-.header-actions button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-}
-
-
-.header-actions button:hover:not(:disabled) {
-    background-color: var(--input-bg);
-    border-color: var(--text-light);
-}
-.header-actions .btn-signup {
-    border-color: var(--accent-gold);
-    color: var(--accent-gold);
-}
-.header-actions .btn-signup:hover:not(:disabled) {
-    background-color: rgba(184, 154, 95, 0.1);
-    border-color: var(--accent-gold);
-}
-
 
 .chat-area {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Pushes input to bottom */
-    overflow: hidden; /* Prevent content overflow */
+    justify-content: space-between;
+    overflow: hidden; /* Contains the messages scrolling */
     position: relative;
 }
 
@@ -216,56 +200,56 @@ body {
 .messages {
     flex-grow: 1;
     overflow-y: auto; /* Scroll for messages */
-    padding: 20px 0; /* Add some padding around messages */
+    padding: 20px 10px 20px 0; /* Add padding, especially right for scrollbar */
     display: flex;
     flex-direction: column;
-    align-items: center; /* Center welcome message */
-    justify-content: center; /* Center welcome message vertically initially */
+    /* align-items: center; Remove this - messages align left/right */
+    /* justify-content: center; Remove this - messages start top */
     scrollbar-width: thin;
     scrollbar-color: #444 var(--bg-dark);
 }
 
-/* Align messages top once populated */
-.messages:not(:empty) {
-    justify-content: flex-start;
-}
-
+/* Keep justify-content default (flex-start) */
 
 .welcome-message {
     font-size: 1.8em;
     font-weight: 500;
     color: var(--text-light);
-    margin-top: auto; /* Push welcome message down initially */
-    margin-bottom: auto; /* Push welcome message up initially */
-    padding-bottom: 100px; /* Add space below welcome */
+    margin: auto; /* Center vertically and horizontally */
+    padding-bottom: 100px;
     text-align: center;
+    align-self: center; /* Ensure centering within flex container */
 }
 
 
 /* Styling for individual chat bubbles */
 .message {
-    max-width: 70%;
+    max-width: 70%; /* Limit width */
     padding: 10px 15px;
     border-radius: 12px;
     margin-bottom: 10px;
     line-height: 1.5;
-    word-wrap: break-word;
-    white-space: pre-wrap; /* Fixes spacing/newlines */
+    /* --- CRITICAL FIXES --- */
+    white-space: pre-wrap;     /* Respect spaces and newlines */
+    overflow-wrap: break-word; /* Break long words/text */
+    word-break: break-word;    /* Alternative breaking */
+    /* --- Ensure it doesn't try to shrink --- */
+    flex-shrink: 0;
 }
 
 .user-message {
     background-color: var(--accent-gold);
-    color: var(--bg-dark); /* Dark text on gold */
-    align-self: flex-end; /* Align right */
-    border-bottom-right-radius: 4px; /* Slightly different corner */
+    color: var(--bg-dark);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
     margin-left: auto;
 }
 
 .bot-message {
     background-color: var(--input-bg);
     color: var(--text-light);
-    align-self: flex-start; /* Align left */
-    border-bottom-left-radius: 4px; /* Slightly different corner */
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
     margin-right: auto;
 }
 
@@ -273,14 +257,15 @@ body {
 .input-container {
     display: flex;
     align-items: center;
-    background-color: var(--accent-gold); /* Gold background */
-    border-radius: 30px; /* Rounded pill shape */
-    padding: 5px 5px 5px 15px; /* Adjusted padding slightly */
-    margin: 20px auto 10px auto; /* Centered with margin */
+    background-color: var(--accent-gold);
+    border-radius: 30px;
+    padding: 5px 5px 5px 15px;
+    margin: 20px auto 10px auto;
     width: 100%;
-    max-width: 700px; /* Max width for input bar */
+    max-width: 700px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     box-sizing: border-box;
+    flex-shrink: 0; /* Prevent input area shrinking */
 }
 
 .input-container input[type="text"] {
@@ -289,38 +274,11 @@ body {
     background: none;
     padding: 10px 15px;
     font-size: 1em;
-    color: var(--bg-dark); /* Dark text on gold */
+    color: var(--bg-dark);
     outline: none;
 }
 .input-container input[type="text"]::placeholder {
-    color: rgba(31, 63, 74, 0.7); /* Muted dark placeholder */
-}
-
-/* Styles for removed elements (harmless but kept for reference) */
-.input-container select {
-     appearance: none;
-     background-color: transparent;
-     padding-right: 25px;
-     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%231F3F4A'%3E%3Cpath d='M6 9l-4-4h8z'/%3E%3C/svg%3E");
-     background-repeat: no-repeat;
-     background-position: right 10px center;
-     opacity: 0.6;
-     cursor: not-allowed;
-     border: none;
-     color: var(--bg-dark);
-     padding: 8px 12px;
-     font-size: 1em;
-
-}
-.input-container .btn-add {
-    font-size: 1.4em;
-    font-weight: 300;
-    padding: 8px 10px 8px 15px;
-    opacity: 0.6;
-    cursor: not-allowed;
-    background: none;
-    border: none;
-    color: var(--bg-dark);
+    color: rgba(31, 63, 74, 0.7);
 }
 
 .input-container .btn-send {
@@ -335,9 +293,10 @@ body {
     font-size: 1.2em;
     margin-left: 5px;
     transition: background-color 0.2s ease;
-    border: none; /* Ensure button style consistency */
-    cursor: pointer; /* Explicitly set cursor */
-    padding: 0; /* Reset padding for icon button */
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0; /* Prevent button shrinking */
 }
 .input-container .btn-send:hover {
      background-color: #2a3f45;
@@ -346,15 +305,16 @@ body {
 /* --- Footer --- */
 .footer {
     text-align: center;
-    padding: 10px 0 0 0; /* Padding above footer */
+    padding: 10px 0 0 0;
     font-size: 0.8rem;
     color: var(--text-muted);
+    flex-shrink: 0; /* Prevent footer shrinking */
 }
 
 
-/* --- Scrollbar (Optional, Webkit browsers) --- */
+/* --- Scrollbar (Webkit) --- */
 ::-webkit-scrollbar {
-    width: 6px;
+    width: 8px; /* Slightly wider */
 }
 ::-webkit-scrollbar-track {
     background: transparent;
@@ -362,4 +322,5 @@ body {
 ::-webkit-scrollbar-thumb {
     background-color: #444;
     border-radius: 10px;
+    border: 2px solid var(--bg-dark); /* Add border to match bg */
 }
