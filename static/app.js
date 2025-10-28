@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let messageHistory = [];
 
     // --- Function to Add Message to UI ---
+    // Uses textContent by default, innerHTML only if applyMarkdown is true
     function addMessageToUI(sender, text, applyMarkdown = false) {
         if (welcomeMessage && messagesContainer.children.length <= 1) {
              messagesContainer.style.justifyContent = 'flex-start';
@@ -23,14 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Apply Markdown AFTER text is complete
             let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            // Basic newline handling for paragraphs after Markdown applied
-            formattedText = formattedText.replace(/\\n/g, '\n'); // Replace escaped newlines from SSE
-            messageDiv.innerHTML = formattedText; // Render Markdown & handle newlines via CSS pre-wrap
+            // Replace escaped newlines potentially added by backend sse function
+            formattedText = formattedText.replace(/\\n/g, '\n');
+            messageDiv.innerHTML = formattedText; // Render Markdown
         } else {
             // Use textContent during streaming and for user messages
-            // This relies on CSS 'white-space: pre-wrap' for spacing/newlines
-            // Replace escaped newlines from SSE stream data
-            messageDiv.textContent = text.replace(/\\n/g, '\n');
+            // Replace escaped newlines potentially added by backend sse function
+            messageDiv.textContent = text.replace(/\\n/g, '\n'); // Relies on CSS 'white-space: pre-wrap'
         }
 
         messagesContainer.appendChild(messageDiv);
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
      // --- Function using Fetch for POST and Stream Processing ---
      async function handleChatStreamWithFetch(history) {
-        let lastBotMessageDiv = addMessageToUI('bot', '');
+        let lastBotMessageDiv = addMessageToUI('bot', ''); // Add placeholder
         if (!lastBotMessageDiv) return;
         let currentContent = ''; // Accumulate raw text
 
@@ -67,26 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        // Get the raw content chunk, keep original spacing from API
-                        const data = line.substring(6); // Data including potential escaped newlines like \\n
-                        // console.log("Raw Chunk:", JSON.stringify(data)); // Debug: Check raw stream data
+                        // Get the raw content chunk, do NOT trim()
+                        const data = line.substring(6); // Includes original spaces/newlines from API
+                        // console.log("Raw Chunk:", JSON.stringify(data)); // Keep for debugging
 
                          if (data.startsWith("[Error]")) {
                             currentContent += data.trim(); // Trim error message
-                            lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${currentContent.replace(/\\n/g, '<br>')}</span>`; // Display error with line breaks
+                            lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${currentContent.replace(/\\n/g, '<br>')}</span>`;
                             throw new Error("Backend Error Received");
                          }
 
-                        // --- Minimal Space Workaround ---
-                        // If current content exists AND doesn't end with whitespace, AND new chunk doesn't start with whitespace, add a space.
-                        if (currentContent.length > 0 && !/\s$/.test(currentContent) && !/^\s/.test(data)) {
-                             currentContent += ' ';
-                        }
-                        // --- End Workaround ---
-
+                        // Append raw chunk directly
                         currentContent += data;
                         // Update textContent - Browser + CSS handles spacing/newlines
-                        // Replace escaped newlines for display during streaming
+                        // Replace escaped newlines added by backend sse function for display
                         lastBotMessageDiv.textContent = currentContent.replace(/\\n/g, '\n');
                         messagesContainer.scrollTop = messagesContainer.scrollHeight; // Keep scrolling
                     }
@@ -95,8 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // AFTER STREAM: Trim final content and apply Markdown
             currentContent = currentContent.trim(); // Clean up potential final whitespace
             if (currentContent.length > 0 && !currentContent.startsWith("[Error]")) {
-                addMessageToUI('assistant', currentContent, true); // Create new div with formatting
-                lastBotMessageDiv.remove(); // Remove the placeholder div
+                addMessageToUI('assistant', currentContent, true); // Create NEW div with formatting
+                lastBotMessageDiv.remove(); // Remove the placeholder div used for streaming
                 messageHistory.push({ role: 'assistant', content: currentContent.replace(/\\n/g, '\n') }); // Store with real newlines
             } else if (currentContent.startsWith("[Error]")) {
                  // Final update for error message styling if needed
