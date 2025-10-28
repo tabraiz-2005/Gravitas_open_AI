@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         micButton.classList.remove('listening');
         micButton.title = "Start voice input";
         messageInput.placeholder = "Ask Anything or use Mic";
-     }
+    }
 
     // --- Mic Button Event Listener ---
     // (No changes needed here)
@@ -73,16 +73,16 @@ document.addEventListener('DOMContentLoaded', () => {
             synth.cancel();
              // If the clicked button was the one speaking, just stop.
              if (currentUtterance && buttonElement && buttonElement.classList.contains('speaking')) {
-                  if (currentUtterance) currentUtterance.onend = null; // Clear listener
-                  currentUtterance = null;
-                  document.querySelectorAll('.btn-tts.speaking').forEach(btn => btn.classList.remove('speaking'));
-                  return; // Stop here
+                 if (currentUtterance) currentUtterance.onend = null; // Clear listener
+                 currentUtterance = null;
+                 document.querySelectorAll('.btn-tts.speaking').forEach(btn => btn.classList.remove('speaking'));
+                 return; // Stop here
              }
              // If a different button was clicked, stop the old one and start the new one below.
         }
 
         // Remove speaking class from any previous button
-         document.querySelectorAll('.btn-tts.speaking').forEach(btn => btn.classList.remove('speaking'));
+          document.querySelectorAll('.btn-tts.speaking').forEach(btn => btn.classList.remove('speaking'));
 
         if (textToSpeak) {
             const utterance = new SpeechSynthesisUtterance(textToSpeak);
@@ -161,9 +161,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return messageDiv; // Return the created message div
     }
 
-     // --- Function using Fetch for POST and Stream Processing ---
-     // (No changes needed in the core streaming logic)
-     async function handleChatStreamWithFetch(history) { /* ... same as before ... */
+    // --- Function using Fetch for POST and Stream Processing ---
+    async function handleChatStreamWithFetch(history) { 
         let lastBotMessageDiv = addMessageToUI('bot', '');
         if (!lastBotMessageDiv) return;
         // Find the span inside the div to update textContent
@@ -173,8 +172,30 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentContent = '';
 
         try {
-            const response = await fetch('/api/chat', { /* ... */ });
-            if (!response.ok) { /* ... */ throw new Error(/* ... */); }
+            // =============================================================
+            // === FIX FOR 405 METHOD NOT ALLOWED ===
+            // === Explicitly set method to POST, content type, and body. ===
+            // =============================================================
+            const response = await fetch('/api/chat', { 
+                method: 'POST', // <-- FIX: Specify POST method
+                headers: {
+                    'Content-Type': 'application/json', // <-- FIX: Specify content type
+                },
+                // Use the entire message history as the body payload
+                body: JSON.stringify({ messages: history }) // <-- FIX: Pass messages array in JSON body
+            });
+            // =============================================================
+
+            if (!response.ok) { 
+                // Handle non-stream HTTP errors (400, 500) that might occur before the stream starts
+                let errorDetails = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorDetails = errorData.error || errorDetails;
+                } catch(e) { /* ignore if no JSON body */ }
+                throw new Error(errorDetails); 
+            }
+            
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -192,11 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         // console.log("Raw Chunk:", JSON.stringify(data));
 
                          if (data.startsWith("[Error]")) {
-                            currentContent += data.trim();
-                            // Update the span within the div for error
-                            contentSpan.innerHTML = `<span style="color: #ff5555;">${currentContent.replace(/\\n/g, '<br>')}</span>`;
-                            lastBotMessageDiv.querySelector('.btn-tts')?.remove(); // Remove TTS button on error
-                            throw new Error("Backend Error Received");
+                             currentContent += data.trim();
+                             // Update the span within the div for error
+                             contentSpan.innerHTML = `<span style="color: #ff5555;">${currentContent.replace(/\\n/g, '<br>')}</span>`;
+                             lastBotMessageDiv.querySelector('.btn-tts')?.remove(); // Remove TTS button on error
+                             throw new Error("Backend Error Received");
                          }
 
                         // Minimal space workaround
@@ -229,34 +250,37 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (currentContent.startsWith("[Error]")) {
                  // Ensure error is fully displayed if stream loop missed it
                  if (!contentSpan.innerHTML.includes('color: #ff5555;')) {
-                       contentSpan.innerHTML = `<span style="color: #ff5555;">${currentContent.replace(/\\n/g, '<br>')}</span>`;
+                         contentSpan.innerHTML = `<span style="color: #ff5555;">${currentContent.replace(/\\n/g, '<br>')}</span>`;
                   }
                   lastBotMessageDiv.querySelector('.btn-tts')?.remove(); // Remove TTS on error
             } else {
                  lastBotMessageDiv.remove(); // Remove placeholder if no content
             }
 
-        } catch (error) { /* ... error handling ... */
+        } catch (error) { 
              console.error("Fetch stream failed:", error);
              // Ensure error is shown in the placeholder or a new div
              const errorMsg = `[Stream Connection Error: ${error.message}]`;
               if (lastBotMessageDiv) {
-                    let errorSpan = lastBotMessageDiv.querySelector('span');
-                    if (errorSpan && !errorSpan.innerHTML.includes('color: #ff5555;')) {
-                        errorSpan.innerHTML += (errorSpan.textContent.length > 0 ? '<br>' : '') + `<span style="color: #ff5555;">${errorMsg}</span>`;
-                    } else if (!errorSpan) {
-                         // Fallback if span wasn't found (shouldn't happen)
-                         lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${errorMsg}</span>`;
-                    }
-                     lastBotMessageDiv.querySelector('.btn-tts')?.remove(); // Remove TTS on error
+                  let errorSpan = lastBotMessageDiv.querySelector('span');
+                  if (errorSpan && !errorSpan.innerHTML.includes('color: #ff5555;')) {
+                      errorSpan.innerHTML += (errorSpan.textContent.length > 0 ? '<br>' : '') + `<span style="color: #ff5555;">${errorMsg}</span>`;
+                  } else if (!errorSpan) {
+                       // Fallback if span wasn't found (shouldn't happen)
+                       lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${errorMsg}</span>`;
+                  }
+                  lastBotMessageDiv.querySelector('.btn-tts')?.remove(); // Remove TTS on error
               } else {
-                 addMessageToUI('bot', `<span style="color: #ff5555;">${errorMsg}</span>`);
+                  addMessageToUI('bot', `<span style="color: #ff5555;">${errorMsg}</span>`);
               }
-        } finally { /* ... re-enable input ... */ }
-     }
+        } finally { 
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+        }
+    }
 
     // --- Event Listener & Keypress for Sending Message ---
-    // (No changes needed here)
     async function sendMessage(event) { /* ... same as before ... */
          event.preventDefault();
         const userText = messageInput.value.trim();
@@ -267,20 +291,19 @@ document.addEventListener('DOMContentLoaded', () => {
         messageInput.disabled = true;
         sendButton.disabled = true;
         await handleChatStreamWithFetch([...messageHistory]);
-     }
-    if (chatForm) { chatForm.addEventListener('submit', sendMessage); }
-    if (messageInput) { /* ... keypress listener ... */ }
-     if (messageInput) {
-        messageInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (!sendButton.disabled) {
-                     const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-                     chatForm.dispatchEvent(submitEvent);
-                }
-            }
-        });
     }
+    if (chatForm) { chatForm.addEventListener('submit', sendMessage); }
+     if (messageInput) {
+         messageInput.addEventListener('keypress', function (e) {
+             if (e.key === 'Enter' && !e.shiftKey) {
+                 e.preventDefault();
+                 if (!sendButton.disabled) {
+                      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                      chatForm.dispatchEvent(submitEvent);
+                 }
+             }
+         });
+     }
 
     // --- ADDED: New Chat Button Functionality ---
     function startNewChat() {
@@ -300,11 +323,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (welcomeMessage) {
             welcomeMessage.style.display = 'block'; // Or 'flex' or 'inline' depending on its default
         }
-         // Optional: Reset scroll position? Usually not needed if clearing content.
-         // messagesContainer.scrollTop = 0;
-
-        // Optional: Reset input field?
-        // messageInput.value = '';
 
         // Re-enable input fields if they were disabled
         messageInput.disabled = false;
