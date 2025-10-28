@@ -235,9 +235,6 @@
 #     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
 
 
-
-
-
 import os
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, Response, stream_with_context, jsonify
@@ -261,8 +258,8 @@ try:
         if not groq_key:
             print("Warning: GROQ_API_KEY environment variable not set.")
         client = Groq(api_key=groq_key)
-        # --- Use the 8B model as default if desired ---
-        model_default = os.getenv("GROQ_MODEL", "llama3-8b-8192") # Or "llama3-70b-8192" for higher quality
+        # --- Use the 70B model as default for higher quality ---
+        model_default = os.getenv("GROQ_MODEL", "llama3-70b-8192") # <--- UPDATED MODEL DEFAULT
     else: # Default to OpenAI
         from openai import OpenAI
         # --- Use GRAVITAS_AI_KEY for OpenAI ---
@@ -284,7 +281,7 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
 # ==============================================
-# --- Multi-Agent Personalities ---
+# --- Multi-Agent Personalities (Enhanced Prompts) ---
 # ==============================================
 AGENTS = {
     "eidos": {
@@ -293,7 +290,7 @@ AGENTS = {
             "You are Eidos, the Emotional Intelligence Coach of GravitasGPT. "
             "You help leaders develop emotional awareness, regulation, and empathy. "
             "Guide them through reflection and emotional clarity. Speak in a calm, Socratic, emotionally intelligent tone. "
-            "Structure responses clearly, use examples, and explain the reasoning behind your guidance." # Enhanced
+            "Structure responses clearly, use examples, and explain the reasoning behind your guidance. Ask insightful follow-up questions." # Enhanced
         ),
     },
     "kinesis": {
@@ -301,7 +298,7 @@ AGENTS = {
         "system": (
             "You are Kinesis, the Body Language Coach of GravitasGPT. "
             "You specialize in nonverbal communication — posture, gestures, tone, and spatial awareness. "
-            "Offer direct, practical, actionable feedback that enhances confidence and congruence. Use bullet points for specific advice." # Enhanced
+            "Offer direct, practical, actionable feedback that enhances confidence and congruence. Use bullet points for specific advice. Explain the impact of each nonverbal cue." # Enhanced
         ),
     },
     "gravis": {
@@ -309,7 +306,7 @@ AGENTS = {
         "system": (
             "You are Gravis, the Gravitas Mentor of GravitasGPT. "
             "You cultivate composure, authority, and presence in leaders. "
-            "Speak with depth and restraint, helping others project calm strength through authenticity. Explain concepts clearly and provide illustrative examples." # Enhanced
+            "Speak with depth and restraint, helping others project calm strength through authenticity. Explain concepts clearly and provide illustrative examples from leadership contexts." # Enhanced
         ),
     },
     "virtus": {
@@ -317,8 +314,8 @@ AGENTS = {
         "system": (
             "You are Virtus, the Roman Leadership Virtues Mentor of GravitasGPT. "
             "You embody classical virtues — Gravitas, Pietas, Virtus, Dignitas, Auctoritas, Constantia, "
-            "Firmitas, Industria, Fides, and Clementia — and apply them to modern leadership. "
-            "Speak with moral clarity and philosophical depth. Connect virtues to practical leadership actions." # Enhanced
+            "Firmitas, Industria, Fides, and Clementia — and apply them to modern leadership challenges. "
+            "Speak with moral clarity and philosophical depth. Connect virtues to practical leadership actions and decision-making." # Enhanced
         ),
     },
     "ethos": {
@@ -326,8 +323,8 @@ AGENTS = {
         "system": (
             "You are Ethos, the Persuasion Strategist of GravitasGPT. "
             "You teach influence through Aristotle’s ethos, pathos, and logos. "
-            "Help craft persuasive, balanced, and impactful narratives, providing step-by-step guidance. "
-            "Your tone is energetic, sharp, and strategic. Use lists and examples." # Enhanced
+            "Help craft persuasive, balanced, and impactful narratives, providing step-by-step guidance and frameworks. "
+            "Your tone is energetic, sharp, and strategic. Use lists, examples, and rhetorical principles." # Enhanced
         ),
     },
     # --- ENHANCED PRAXIS PROMPT ---
@@ -337,10 +334,10 @@ AGENTS = {
             "You are Praxis, the Leadership Presence Coach of GravitasGPT. "
             "You develop executive presence — calm authority, confidence, and clarity in leaders. "
             "Offer empowering, practical, and actionable advice aligned with leadership authenticity. "
-            "Structure your responses clearly, often using bullet points or numbered lists for actionable steps. "
-            "Explain the 'why' behind your recommendations. Provide concrete examples or brief scenarios where possible. "
+            "Structure your responses clearly, often using bullet points or numbered lists for actionable steps (provide at least 3 distinct recommendations when appropriate). "
+            "Explain the 'why' behind your recommendations, connecting them to leadership impact. Provide concrete examples or brief scenarios where possible, especially relating to CEO/senior leader challenges. "
             "Maintain an encouraging, insightful, and authoritative tone suitable for coaching executives. "
-            "Always aim to provide substantial, well-reasoned guidance."
+            "Anticipate potential follow-up questions. Always aim to provide substantial, well-reasoned guidance." # Further Enhanced
         ),
     },
     "anima": {
@@ -348,7 +345,7 @@ AGENTS = {
         "system": (
             "You are Anima, the Internal Presence Mentor of GravitasGPT. "
             "You help leaders reconnect with inner stillness, mindfulness, and purpose. "
-            "Speak gently and introspectively, guiding alignment and authenticity. Offer simple exercises or reflections." # Enhanced
+            "Speak gently and introspectively, guiding alignment and authenticity. Offer simple, concrete exercises or reflections that can be practiced daily." # Enhanced
         ),
     },
     "persona": {
@@ -356,7 +353,7 @@ AGENTS = {
         "system": (
             "You are Persona, the External Presence Advisor of GravitasGPT. "
             "You refine how leaders are perceived — appearance, tone, and projection. "
-            "Be polished, precise, and balance confidence with approachability. Give specific, actionable tips." # Enhanced
+            "Be polished, precise, and balance confidence with approachability. Give specific, actionable tips with clear rationale." # Enhanced
         ),
     },
     "impressa": {
@@ -364,7 +361,7 @@ AGENTS = {
         "system": (
             "You are Impressa, the First Impression Specialist of GravitasGPT. "
             "You guide leaders to make strong first impressions with warmth and credibility. "
-            "Use friendly, science-based micro-behavioral insights. Provide clear dos and don'ts." # Enhanced
+            "Use friendly, science-based micro-behavioral insights. Provide clear dos and don'ts with explanations." # Enhanced
         ),
     },
     "sentio": {
@@ -372,14 +369,14 @@ AGENTS = {
         "system": (
             "You are Sentio, the Empathy Development Guide of GravitasGPT. "
             "You nurture compassion, understanding, and emotional connection in leaders. "
-            "Your tone is warm, validating, and psychologically attuned. Suggest perspective-taking exercises." # Enhanced
+            "Your tone is warm, validating, and psychologically attuned. Suggest perspective-taking exercises and active listening techniques." # Enhanced
         ),
     },
     "guardian": {
         "name": "Guardian – Scope Filter",
         "system": (
             "You are Guardian, the contextual scope filter of GravitasGPT. "
-            "If the user asks about something clearly outside leadership, communication, or emotional mastery " # Refined trigger
+            "If the user asks about something clearly outside leadership, communication, or emotional mastery "
             "(e.g., coding help, recipes, specific historical facts unrelated to leadership), "
             "you kindly clarify the suite’s focus: 'My expertise is centered on leadership development, communication skills, and emotional mastery. How can I assist you within those areas today?'" # Refined response
         ),
@@ -391,7 +388,7 @@ SENATE = {
     "system": (
         "You are The Senate, a meta-agent representing the collective wisdom of GravitasGPT’s mentors. "
         "You synthesize insights from emotional intelligence, persuasion, presence, and virtue to guide leaders holistically. "
-        "Respond with balance, composure, clarity, and well-structured, comprehensive advice using lists or steps where appropriate." # Enhanced
+        "Respond with balance, composure, clarity, and well-structured, comprehensive advice using lists or steps where appropriate. Ensure your response integrates perspectives from multiple relevant areas." # Enhanced
     ),
 }
 
@@ -399,50 +396,49 @@ SENATE = {
 def detect_agent(user_input: str):
     """Selects the most appropriate agent based on keywords."""
     text = user_input.lower().strip()
-    # Expanded terms slightly
+    # Expanded terms
     leadership_terms = [
         "leader", "leadership", "team", "emotion", "empathy", "speech", "presence", "communication",
         "influence", "virtue", "authority", "values", "mindfulness", "presentation", "confidence",
         "persuasion", "integrity", "motivation", "body language", "posture", "manage", "ceo",
-        "executive", "coach", "mentor", "guide", "develop", "improve", "skill", "career" # Added more general terms
+        "executive", "coach", "mentor", "guide", "develop", "improve", "skill", "career", "feedback", # Added more
+        "strategy", "vision", "decision making"
     ]
     # Check if ANY leadership term is present. If not, trigger Guardian.
-    # Also trigger Guardian for very short, non-greeting inputs.
-    is_short_irrelevant = len(text.split()) < 3 and text not in ["hi", "hello", "ok", "thanks", "thank you", "yes", "no"]
-    if not any(term in text for term in leadership_terms) or is_short_irrelevant:
-         # Check common off-topic requests explicitly
-         off_topic_keywords = ["code", "recipe", "math", "history", "science", "translate", "stock market", "weather"]
-         if any(keyword in text for keyword in off_topic_keywords):
-              return AGENTS["guardian"]
-         # If not clearly off-topic but short/no keywords, still default to Praxis below instead of Guardian immediately.
+    is_short_irrelevant = len(text.split()) < 3 and text not in ["hi", "hello", "ok", "thanks", "thank you", "yes", "no", "why", "how"]
+    off_topic_keywords = ["code", "recipe", "math", "history", "science", "translate", "stock market", "weather", "movie", "book summary"]
+    is_clearly_off_topic = any(keyword in text for keyword in off_topic_keywords)
 
-    # Agent detection logic (order matters - more specific checks first)
-    if "senate" in text or "consult" in text or "all mentors" in text:
+    if (not any(term in text for term in leadership_terms) and is_short_irrelevant) or is_clearly_off_topic:
+         return AGENTS["guardian"]
+
+    # Agent detection logic (order matters)
+    if "senate" in text or "consult" in text or "all mentors" in text or "holistic" in text:
         return SENATE
-    if any(w in text for w in ["emotion", "empathy", "feeling", "conflict", "sensitive", "eq", "stress management"]):
+    if any(w in text for w in ["emotion", "empathy", "feeling", "conflict", "sensitive", "eq", "stress management", "self-aware", "mood"]):
         return AGENTS["eidos"]
-    if any(w in text for w in ["body", "gesture", "posture", "tone", "eye contact", "nonverbal"]):
+    if any(w in text for w in ["body", "gesture", "posture", "tone", "eye contact", "nonverbal", "voice modulation"]):
         return AGENTS["kinesis"]
-    if any(w in text for w in ["gravitas", "composure", "calm strength", "seriousness"]):
+    if any(w in text for w in ["gravitas", "composure", "calm strength", "seriousness", "poise"]):
         return AGENTS["gravis"]
-    if any(w in text for w in ["virtue", "integrity", "values", "duty", "ethics", "honor", "moral"]):
+    if any(w in text for w in ["virtue", "integrity", "values", "duty", "ethics", "honor", "moral", "principles"]):
         return AGENTS["virtus"]
-    if any(w in text for w in ["persuade", "influence", "story", "speech", "pitch", "proposal", "negotiate", "argument"]):
+    if any(w in text for w in ["persuade", "influence", "story", "speech", "pitch", "proposal", "negotiate", "argument", "convince"]):
         return AGENTS["ethos"]
     # Praxis handles general presence and leadership if not caught by others
-    if any(w in text for w in ["presence", "authority", "executive presence", "command"]):
+    if any(w in text for w in ["presence", "authority", "executive presence", "command", "impact"]):
         return AGENTS["praxis"]
-    if any(w in text for w in ["inner", "mindfulness", "alignment", "purpose", "anxiety", "stillness", "focus"]):
+    if any(w in text for w in ["inner", "mindfulness", "alignment", "purpose", "anxiety", "stillness", "focus", "meditation"]):
         return AGENTS["anima"]
     if any(w in text for w in ["appearance", "attire", "style", "grooming", "energy", "brand", "impression", "perception"]):
-         if any(w in text for w in ["first impression", "introduce", "introduction", "elevator pitch", "rapport"]):
+         if any(w in text for w in ["first impression", "introduce", "introduction", "elevator pitch", "rapport", "greeting"]):
               return AGENTS["impressa"]
          else:
               return AGENTS["persona"]
-    if any(w in text for w in ["empathic", "listen", "understand", "compassion", "care", "perspective", "connect"]):
+    if any(w in text for w in ["empathic", "listen", "understand", "compassion", "care", "perspective", "connect", "relationship"]):
         return AGENTS["sentio"]
 
-    # --- UPDATED DEFAULT AGENT ---
+    # --- DEFAULT AGENT ---
     # If no specific agent matches but it seems related to leadership, default to Praxis
     if any(term in text for term in leadership_terms):
         return AGENTS["praxis"]
@@ -452,12 +448,8 @@ def detect_agent(user_input: str):
 
 
 def sse(data: str) -> str:
-    """Formats data for Server-Sent Events."""
-    # Replace newlines within the data chunk to prevent breaking SSE format
-    # Use a less common replacement temporarily if needed, or ensure data has no internal newlines
-    # For now, assume chunks don't contain literal '\n\n' needed by SSE itself.
-    # A simple newline replacement should be safe for display:
-    processed_data = data.replace('\n', '\\n') # Escape newlines for SSE data segment
+    """Formats data for Server-Sent Events, escaping newlines."""
+    processed_data = data.replace('\n', '\\n') # Escape newlines
     return f"data: {processed_data}\n\n"
 
 
@@ -477,6 +469,11 @@ def stream_chat(messages, model_name: str):
             return
 
         all_messages = [{"role": "system", "content": selected["system"]}] + messages
+        # Ensure message history doesn't get excessively long (optional limit)
+        MAX_HISTORY = 10 # Keep system + last 9 messages (5 user, 4 assistant) approx
+        if len(all_messages) > MAX_HISTORY + 1:
+             all_messages = [all_messages[0]] + all_messages[-(MAX_HISTORY):] # Keep system + latest N
+
         model = model_name or model_default
 
         print(f"--- Requesting chat completion ---")
@@ -535,12 +532,11 @@ def chat():
         print("Error: Received request with no messages.")
         return jsonify({"error": "No messages provided"}), 400
 
-    # Basic validation of message format
     if not isinstance(messages, list) or not all(isinstance(m, dict) and 'role' in m and 'content' in m for m in messages):
          print(f"Error: Invalid messages format received: {messages}")
          return jsonify({"error": "Invalid messages format"}), 400
 
-    model = data.get("model") # Allow frontend to specify model (optional)
+    model = data.get("model")
     generator = stream_with_context(stream_chat(messages, model))
     headers = {
         "Cache-Control": "no-cache",
@@ -552,12 +548,8 @@ def chat():
 
 
 if __name__ == "__main__":
-    # Use environment variables for host and port, default suitable for Render
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 10000)) # Default Render port is 10000
+    port = int(os.getenv("PORT", 10000))
     debug_mode = os.getenv("FLASK_DEBUG", "False").lower() == "true"
     print(f"Starting Flask app on {host}:{port} (Debug: {debug_mode})")
-    app.run(host=host, port=port, debug=debug_mode)
-
-
-
+    app.run(host=host, port=port, debug=debug_mode) # Total lines: 235
