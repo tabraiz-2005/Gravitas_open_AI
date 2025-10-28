@@ -8,6 +8,7 @@
     --text-muted: #888;
     --border-color: #2a3f45;
     --input-bg: #2a3f45;
+    --danger-red: #D32F2F; /* Red for listening state */
 }
 
 body {
@@ -25,8 +26,6 @@ body {
     display: flex;
     height: 100vh;
 }
-
-
 
 /* --- Sidebar --- */
 .sidebar {
@@ -47,11 +46,6 @@ body {
     flex-wrap: wrap;
 }
 
-/* Logo style is kept in case user adds it back */
-.logo {
-    height: 30px;
-    margin-right: 10px;
-}
 .logo-text {
     font-size: 1.2em;
     font-weight: 600;
@@ -88,9 +82,13 @@ body {
 
 .nav-item .icon {
     margin-right: 10px;
-    font-size: 1.1em;
+    font-size: 1.1em; /* Adjust if needed for FA icons */
     width: 20px;
     text-align: center;
+}
+/* Ensure FontAwesome icons align well */
+.nav-item .icon i {
+     line-height: inherit;
 }
 
 .nav-item:hover {
@@ -190,36 +188,6 @@ body {
     flex-shrink: 0; /* Prevent header shrinking */
 }
 
-/* Styles for header actions buttons (kept in case they are added back) */
-.header-actions button {
-    background: none;
-    border: 1px solid var(--text-muted);
-    color: var(--text-light);
-    padding: 6px 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    margin-left: 10px;
-    font-size: 0.9em;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-.header-actions button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-}
-.header-actions button:hover:not(:disabled) {
-    background-color: var(--input-bg);
-    border-color: var(--text-light);
-}
-.header-actions .btn-signup {
-    border-color: var(--accent-gold);
-    color: var(--accent-gold);
-}
-.header-actions .btn-signup:hover:not(:disabled) {
-    background-color: rgba(184, 154, 95, 0.1);
-    border-color: var(--accent-gold);
-}
-
-
 .chat-area {
     flex-grow: 1;
     display: flex;
@@ -263,12 +231,13 @@ body {
     border-radius: 12px;
     margin-bottom: 10px;
     line-height: 1.5;
-    /* --- CRITICAL SPACING & WRAPPING FIXES --- */
+    /* --- CRITICAL SPACING & WRAPPING --- */
     white-space: pre-wrap;     /* Respect spaces & newlines */
-    overflow-wrap: break-word; /* Break long words if necessary */
-    word-break: break-word;    /* Helps break words/text to prevent overflow */
-    /* ----------------------------------------- */
+    overflow-wrap: break-word; /* Break long words */
+    word-break: break-word;    /* Helps break words */
+    /* ----------------------------------- */
     flex-shrink: 0; /* Prevent shrinking */
+    position: relative; /* Needed for positioning the TTS button */
 }
 
 .user-message {
@@ -285,7 +254,46 @@ body {
     align-self: flex-start;
     border-bottom-left-radius: 4px;
     margin-right: auto;
+    /* --- ADDED padding for TTS button --- */
+    padding-right: 35px; /* Space for TTS icon */
 }
+
+/* --- Text-to-Speech Button Style --- */
+.btn-tts {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9em; /* Adjust size if needed */
+    padding: 3px;
+    opacity: 0.5; /* Hidden until hover */
+    transition: opacity 0.2s ease, color 0.2s ease;
+    z-index: 1; /* Ensure it's clickable */
+}
+
+.bot-message:hover .btn-tts {
+    opacity: 1; /* Show on hover */
+}
+
+.btn-tts:hover {
+    color: var(--text-light); /* Brighter on hover */
+}
+.btn-tts.speaking i { /* Style icon when speaking */
+     color: var(--accent-gold); /* Indicate speaking */
+     /* Optional: Add subtle animation */
+     /* animation: pulse 1s infinite; */
+}
+
+/* Optional pulse animation */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
 
 /* --- Input Container --- */
 .input-container {
@@ -293,20 +301,80 @@ body {
     align-items: center;
     background-color: var(--accent-gold);
     border-radius: 30px;
-    padding: 5px 5px 5px 15px; /* Adjusted padding */
+    /* Adjusted padding */
+    padding: 5px 8px 5px 8px; /* Consistent padding around */
     margin: 20px auto 10px auto;
     width: 100%;
     max-width: 700px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     box-sizing: border-box;
-    flex-shrink: 0; /* Prevent input area shrinking */
+    flex-shrink: 0;
 }
+
+/* Common style for icon buttons in input bar */
+.btn-icon {
+    background: none;
+    border: none;
+    color: var(--bg-dark); /* Dark icon color on gold background */
+    font-size: 1.2em; /* Default icon size */
+    cursor: pointer;
+    padding: 8px; /* Consistent padding */
+    margin: 0 4px; /* Consistent margin */
+    line-height: 1;
+    transition: color 0.2s ease, background-color 0.2s ease;
+    border-radius: 50%; /* Make them circular */
+    width: 34px; /* Fixed width */
+    height: 34px; /* Fixed height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+.btn-icon:hover {
+    background-color: rgba(0, 0, 0, 0.1); /* Subtle background hover */
+}
+
+/* Specific icon button styles */
+.btn-mic {
+   font-size: 1.3em; /* Slightly larger mic */
+}
+.btn-mic.listening {
+    color: var(--danger-red); /* Red when listening */
+    background-color: rgba(211, 47, 47, 0.1); /* Faint red background */
+}
+.btn-mic.listening:hover {
+     background-color: rgba(211, 47, 47, 0.2);
+}
+
+
+.btn-send {
+    background-color: var(--bg-dark);
+    color: var(--accent-gold);
+    /* Adjust size slightly if needed */
+    width: 36px;
+    height: 36px;
+    font-size: 1.1em; /* Arrow size */
+}
+.btn-send:hover {
+     background-color: #2a3f45; /* Darker background on hover */
+}
+/* Disabled send button */
+.btn-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--input-bg); /* Muted background */
+}
+.btn-send:disabled:hover {
+     background-color: var(--input-bg); /* No hover change when disabled */
+}
+
 
 .input-container input[type="text"] {
     flex-grow: 1;
     border: none;
     background: none;
-    padding: 10px 15px;
+    /* Adjusted padding */
+    padding: 10px 8px;
     font-size: 1em;
     color: var(--bg-dark);
     outline: none;
@@ -315,40 +383,6 @@ body {
     color: rgba(31, 63, 74, 0.7);
 }
 
-/* Styles for removed elements (harmless but kept for reference if added back) */
-.input-container select {
-     /* Style rules for select if it were present */
-     opacity: 0.6;
-     cursor: not-allowed;
-     /* etc. */
-}
-.input-container .btn-add {
-     /* Style rules for btn-add if it were present */
-     opacity: 0.6;
-     cursor: not-allowed;
-     /* etc. */
-}
-
-.input-container .btn-send {
-    background-color: var(--bg-dark);
-    color: var(--accent-gold);
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2em;
-    margin-left: 5px;
-    transition: background-color 0.2s ease;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    flex-shrink: 0; /* Prevent button shrinking */
-}
-.input-container .btn-send:hover {
-     background-color: #2a3f45;
-}
 
 /* --- Footer --- */
 .footer {
@@ -376,78 +410,3 @@ body {
 .messages::-webkit-scrollbar-thumb {
     border: 2px solid var(--bg-dark); /* Ensure thumb border matches chat area background */
 }
-
-/* ... (Keep all existing CSS rules) ... */
-
-/* --- Input Container --- */
-.input-container {
-    display: flex;
-    align-items: center;
-    background-color: var(--accent-gold);
-    border-radius: 30px;
-    /* Adjusted padding to accommodate mic button */
-    padding: 5px 5px 5px 10px;
-    margin: 20px auto 10px auto;
-    width: 100%;
-    max-width: 700px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    box-sizing: border-box;
-    flex-shrink: 0;
-}
-
-/* Style for the new Microphone button */
-.input-container .btn-mic {
-    background: none;
-    border: none;
-    color: var(--bg-dark); /* Same color as send button text */
-    font-size: 1.4em; /* Adjust size as needed */
-    cursor: pointer;
-    padding: 8px 10px; /* Adjust padding */
-    margin-right: 5px; /* Space between mic and input */
-    line-height: 1; /* Align icon vertically */
-    transition: color 0.2s ease;
-}
-.input-container .btn-mic:hover {
-    color: #000; /* Darker hover effect */
-}
-/* Style when listening (added via JS) */
-.input-container .btn-mic.listening {
-    color: #D32F2F; /* Red color when active */
-}
-
-
-.input-container input[type="text"] {
-    flex-grow: 1;
-    border: none;
-    background: none;
-    padding: 10px 15px;
-    font-size: 1em;
-    color: var(--bg-dark);
-    outline: none;
-}
-.input-container input[type="text"]::placeholder {
-    color: rgba(31, 63, 74, 0.7);
-}
-
-.input-container .btn-send {
-    background-color: var(--bg-dark);
-    color: var(--accent-gold);
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2em;
-    margin-left: 5px;
-    transition: background-color 0.2s ease;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    flex-shrink: 0;
-}
-.input-container .btn-send:hover {
-     background-color: #2a3f45;
-}
-
-/* ... (Rest of CSS remains unchanged) ... */
