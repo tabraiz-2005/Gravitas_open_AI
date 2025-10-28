@@ -5,13 +5,103 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendButton = document.getElementById('sendButton');
     const chatForm = document.getElementById('chatForm');
     const welcomeMessage = document.querySelector('.welcome-message');
+    // --- ADDED --- Mic button element
+    const micButton = document.getElementById('micButton');
 
     // --- State ---
     let messageHistory = [];
 
+    // --- Web Speech API Setup ---
+    // Check for browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isListening = false;
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false; // Process single utterances
+        recognition.lang = 'en-US';    // Set language
+        recognition.interimResults = false; // Get final results only
+        recognition.maxAlternatives = 1;
+
+        // --- Event Handlers for Speech Recognition ---
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            messageInput.value = transcript; // Put recognized text in input
+            stopListening(); // Stop after getting a result
+
+            // Optional: Automatically send the message after recognition
+            // const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+            // chatForm.dispatchEvent(submitEvent);
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+            if (event.error === 'no-speech') {
+                alert("No speech detected. Please try again.");
+            } else if (event.error === 'audio-capture') {
+                alert("Microphone error. Ensure it's enabled and connected.");
+            } else if (event.error === 'not-allowed') {
+                alert("Microphone permission denied. Please allow access in browser settings.");
+            } else {
+                 alert(`An error occurred during speech recognition: ${event.error}`);
+            }
+            stopListening(); // Ensure listening stops on error
+        };
+
+        recognition.onend = () => {
+             // This might fire naturally or after stop()
+             // Ensure UI reflects the stopped state if it wasn't an error/result end
+            if (isListening) {
+                stopListening();
+            }
+        };
+
+    } else {
+        console.warn("Speech Recognition not supported in this browser.");
+        if(micButton) micButton.disabled = true; // Disable button if not supported
+        if(micButton) micButton.title = "Voice input not supported by your browser";
+    }
+
+    // --- Functions to control listening state ---
+    function startListening() {
+        if (!recognition || isListening) return;
+        try {
+            recognition.start();
+            isListening = true;
+            micButton.classList.add('listening'); // Visual feedback
+            micButton.title = "Stop voice input";
+            messageInput.placeholder = "Listening..."; // Update placeholder
+        } catch (e) {
+             console.error("Error starting recognition:", e);
+             alert("Could not start voice input. Please ensure microphone access is granted.");
+        }
+    }
+
+    function stopListening() {
+        if (!recognition || !isListening) return;
+        recognition.stop();
+        isListening = false;
+        micButton.classList.remove('listening'); // Remove visual feedback
+        micButton.title = "Start voice input";
+        messageInput.placeholder = "Ask Anything or use Mic"; // Restore placeholder
+    }
+
+    // --- Mic Button Event Listener ---
+    if (micButton && recognition) {
+        micButton.addEventListener('click', () => {
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        });
+    }
+
+
     // --- Function to Add Message to UI ---
-    // Uses textContent by default, innerHTML only if applyMarkdown is true
-    function addMessageToUI(sender, text, applyMarkdown = false) {
+    // (No changes needed in this function from the last version)
+    function addMessageToUI(sender, text, applyMarkdown = false) { /* ... same as before ... */
         if (welcomeMessage && messagesContainer.children.length <= 1) {
              messagesContainer.style.justifyContent = 'flex-start';
              welcomeMessage.style.display = 'none';
@@ -21,28 +111,25 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
 
         if (applyMarkdown) {
-            // Apply Markdown AFTER text is complete
             let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            // Replace escaped newlines potentially added by backend sse function
             formattedText = formattedText.replace(/\\n/g, '\n');
-            messageDiv.innerHTML = formattedText; // Render Markdown
+            messageDiv.innerHTML = formattedText;
         } else {
-            // Use textContent during streaming and for user messages
-            // Replace escaped newlines potentially added by backend sse function
-            messageDiv.textContent = text.replace(/\\n/g, '\n'); // Relies on CSS 'white-space: pre-wrap'
+            messageDiv.textContent = text.replace(/\\n/g, '\n');
         }
 
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        return messageDiv; // Return the created div
+        return messageDiv;
     }
 
      // --- Function using Fetch for POST and Stream Processing ---
-     async function handleChatStreamWithFetch(history) {
-        let lastBotMessageDiv = addMessageToUI('bot', ''); // Add placeholder
+     // (No changes needed in this function from the last version)
+     async function handleChatStreamWithFetch(history) { /* ... same as before ... */
+        let lastBotMessageDiv = addMessageToUI('bot', '');
         if (!lastBotMessageDiv) return;
-        let currentContent = ''; // Accumulate raw text
+        let currentContent = '';
 
         try {
             const response = await fetch('/api/chat', {
@@ -67,38 +154,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        // Get the raw content chunk, do NOT trim()
-                        const data = line.substring(6); // Includes original spaces/newlines from API
-                        // console.log("Raw Chunk:", JSON.stringify(data)); // Keep for debugging
+                        const data = line.substring(6);
+                        // console.log("Raw Chunk:", JSON.stringify(data));
 
                          if (data.startsWith("[Error]")) {
-                            currentContent += data.trim(); // Trim error message
+                            currentContent += data.trim();
                             lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${currentContent.replace(/\\n/g, '<br>')}</span>`;
                             throw new Error("Backend Error Received");
                          }
 
-                        // Append raw chunk directly
+                        if (currentContent.length > 0 && !/\s$/.test(currentContent) && !/^\s/.test(data)) {
+                             currentContent += ' ';
+                        }
+
                         currentContent += data;
-                        // Update textContent - Browser + CSS handles spacing/newlines
-                        // Replace escaped newlines added by backend sse function for display
                         lastBotMessageDiv.textContent = currentContent.replace(/\\n/g, '\n');
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Keep scrolling
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     }
                 }
             }
-            // AFTER STREAM: Trim final content and apply Markdown
-            currentContent = currentContent.trim(); // Clean up potential final whitespace
+            currentContent = currentContent.trim();
             if (currentContent.length > 0 && !currentContent.startsWith("[Error]")) {
-                addMessageToUI('assistant', currentContent, true); // Create NEW div with formatting
-                lastBotMessageDiv.remove(); // Remove the placeholder div used for streaming
-                messageHistory.push({ role: 'assistant', content: currentContent.replace(/\\n/g, '\n') }); // Store with real newlines
+                addMessageToUI('assistant', currentContent, true);
+                lastBotMessageDiv.remove();
+                messageHistory.push({ role: 'assistant', content: currentContent.replace(/\\n/g, '\n') });
             } else if (currentContent.startsWith("[Error]")) {
-                 // Final update for error message styling if needed
                  if (!lastBotMessageDiv.innerHTML.includes('color: #ff5555;')) {
                        lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${currentContent.replace(/\\n/g, '<br>')}</span>`;
                   }
             } else {
-                 lastBotMessageDiv.remove(); // Remove placeholder if no content
+                 lastBotMessageDiv.remove();
             }
 
         } catch (error) {
@@ -114,10 +199,11 @@ document.addEventListener('DOMContentLoaded', () => {
             messageInput.disabled = false;
             messageInput.focus();
         }
-    }
+     }
 
-    // --- Event Listener & Keypress --- (No changes needed)
-    async function sendMessage(event) {
+    // --- Event Listener & Keypress ---
+    // (No changes needed here)
+    async function sendMessage(event) { /* ... same as before ... */
         event.preventDefault();
         const userText = messageInput.value.trim();
         if (!userText) return;
@@ -127,9 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
         messageInput.disabled = true;
         sendButton.disabled = true;
         await handleChatStreamWithFetch([...messageHistory]);
-    }
+     }
     if (chatForm) { chatForm.addEventListener('submit', sendMessage); }
-    if (messageInput) {
+    if (messageInput) { /* ... keypress listener ... */
         messageInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -139,6 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-    }
+     }
 
 });
