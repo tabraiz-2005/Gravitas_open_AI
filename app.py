@@ -234,14 +234,18 @@
 # if __name__ == "__main__":
 #     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
 
-
 import os
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, Response, stream_with_context, jsonify
 from flask_cors import CORS
 # --- Added for potential AuthenticationError handling ---
 from openai import AuthenticationError
-from groq import AuthenticationError as GroqAuthenticationError # Alias if names clash
+# Import Groq and alias its AuthenticationError if necessary (though the try/except block handles this)
+try:
+    from groq import Groq, AuthenticationError as GroqAuthenticationError
+except ImportError:
+    Groq = None
+    GroqAuthenticationError = AuthenticationError # Fallback
 
 load_dotenv()
 
@@ -252,26 +256,29 @@ client = None
 model_default = None
 try:
     if PROVIDER == "groq":
-        from groq import Groq
         # --- Use GROQ_API_KEY for Groq ---
-        groq_key = os.getenv("GROQ_API_KEY") # Ensure this is set in Render
+        groq_key = os.getenv("GROQ_API_KEY") 
         if not groq_key:
             print("Warning: GROQ_API_KEY environment variable not set.")
-        client = Groq(api_key=groq_key)
-        # --- Use the 70B model as default for higher quality ---
-        model_default = os.getenv("GROQ_MODEL", "llama3-70b-8192") # <--- UPDATED MODEL DEFAULT
+        # Initialize client only if key exists
+        if groq_key:
+            client = Groq(api_key=groq_key)
+            # Use the 70B model as default for higher quality
+            model_default = os.getenv("GROQ_MODEL", "llama3-70b-8192") 
     else: # Default to OpenAI
-        from openai import OpenAI
         # --- Use GRAVITAS_AI_KEY for OpenAI ---
-        openai_key = os.getenv("GRAVITAS_AI_KEY") # Ensure this is set in Render
+        openai_key = os.getenv("GRAVITAS_AI_KEY") 
         if not openai_key:
             print("Warning: GRAVITAS_AI_KEY environment variable not set.")
-        client = OpenAI(api_key=openai_key)
-        model_default = os.getenv("OPENAI_MODEL", "gpt-4o") # A strong default OpenAI model
+        # Initialize client only if key exists
+        if openai_key:
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key)
+            model_default = os.getenv("OPENAI_MODEL", "gpt-4o") 
 
 except (ImportError, NameError) as e:
     print(f"Error initializing AI client library for provider '{PROVIDER}': {e}")
-    client = None # Ensure client is None if initialization fails
+    client = None 
 except (AuthenticationError, GroqAuthenticationError) as e:
     print(f"Authentication Error initializing AI client for provider '{PROVIDER}': {e}")
     client = None
@@ -290,7 +297,7 @@ AGENTS = {
             "You are Eidos, the Emotional Intelligence Coach of GravitasGPT. "
             "You help leaders develop emotional awareness, regulation, and empathy. "
             "Guide them through reflection and emotional clarity. Speak in a calm, Socratic, emotionally intelligent tone. "
-            "Structure responses clearly, use examples, and explain the reasoning behind your guidance. Ask insightful follow-up questions." # Enhanced
+            "Structure responses clearly, use examples, and explain the reasoning behind your guidance. Ask insightful follow-up questions."
         ),
     },
     "kinesis": {
@@ -298,7 +305,7 @@ AGENTS = {
         "system": (
             "You are Kinesis, the Body Language Coach of GravitasGPT. "
             "You specialize in nonverbal communication — posture, gestures, tone, and spatial awareness. "
-            "Offer direct, practical, actionable feedback that enhances confidence and congruence. Use bullet points for specific advice. Explain the impact of each nonverbal cue." # Enhanced
+            "Offer direct, practical, actionable feedback that enhances confidence and congruence. Use bullet points for specific advice. Explain the impact of each nonverbal cue."
         ),
     },
     "gravis": {
@@ -306,7 +313,7 @@ AGENTS = {
         "system": (
             "You are Gravis, the Gravitas Mentor of GravitasGPT. "
             "You cultivate composure, authority, and presence in leaders. "
-            "Speak with depth and restraint, helping others project calm strength through authenticity. Explain concepts clearly and provide illustrative examples from leadership contexts." # Enhanced
+            "Speak with depth and restraint, helping others project calm strength through authenticity. Explain concepts clearly and provide illustrative examples from leadership contexts."
         ),
     },
     "virtus": {
@@ -315,7 +322,7 @@ AGENTS = {
             "You are Virtus, the Roman Leadership Virtues Mentor of GravitasGPT. "
             "You embody classical virtues — Gravitas, Pietas, Virtus, Dignitas, Auctoritas, Constantia, "
             "Firmitas, Industria, Fides, and Clementia — and apply them to modern leadership challenges. "
-            "Speak with moral clarity and philosophical depth. Connect virtues to practical leadership actions and decision-making." # Enhanced
+            "Speak with moral clarity and philosophical depth. Connect virtues to practical leadership actions and decision-making."
         ),
     },
     "ethos": {
@@ -324,7 +331,7 @@ AGENTS = {
             "You are Ethos, the Persuasion Strategist of GravitasGPT. "
             "You teach influence through Aristotle’s ethos, pathos, and logos. "
             "Help craft persuasive, balanced, and impactful narratives, providing step-by-step guidance and frameworks. "
-            "Your tone is energetic, sharp, and strategic. Use lists, examples, and rhetorical principles." # Enhanced
+            "Your tone is energetic, sharp, and strategic. Use lists, examples, and rhetorical principles."
         ),
     },
     # --- ENHANCED PRAXIS PROMPT ---
@@ -337,7 +344,7 @@ AGENTS = {
             "Structure your responses clearly, often using bullet points or numbered lists for actionable steps (provide at least 3 distinct recommendations when appropriate). "
             "Explain the 'why' behind your recommendations, connecting them to leadership impact. Provide concrete examples or brief scenarios where possible, especially relating to CEO/senior leader challenges. "
             "Maintain an encouraging, insightful, and authoritative tone suitable for coaching executives. "
-            "Anticipate potential follow-up questions. Always aim to provide substantial, well-reasoned guidance." # Further Enhanced
+            "Anticipate potential follow-up questions. Always aim to provide substantial, well-reasoned guidance."
         ),
     },
     "anima": {
@@ -345,7 +352,7 @@ AGENTS = {
         "system": (
             "You are Anima, the Internal Presence Mentor of GravitasGPT. "
             "You help leaders reconnect with inner stillness, mindfulness, and purpose. "
-            "Speak gently and introspectively, guiding alignment and authenticity. Offer simple, concrete exercises or reflections that can be practiced daily." # Enhanced
+            "Speak gently and introspectively, guiding alignment and authenticity. Offer simple, concrete exercises or reflections that can be practiced daily."
         ),
     },
     "persona": {
@@ -353,7 +360,7 @@ AGENTS = {
         "system": (
             "You are Persona, the External Presence Advisor of GravitasGPT. "
             "You refine how leaders are perceived — appearance, tone, and projection. "
-            "Be polished, precise, and balance confidence with approachability. Give specific, actionable tips with clear rationale." # Enhanced
+            "Be polished, precise, and balance confidence with approachability. Give specific, actionable tips with clear rationale."
         ),
     },
     "impressa": {
@@ -361,7 +368,7 @@ AGENTS = {
         "system": (
             "You are Impressa, the First Impression Specialist of GravitasGPT. "
             "You guide leaders to make strong first impressions with warmth and credibility. "
-            "Use friendly, science-based micro-behavioral insights. Provide clear dos and don'ts with explanations." # Enhanced
+            "Use friendly, science-based micro-behavioral insights. Provide clear dos and don'ts with explanations."
         ),
     },
     "sentio": {
@@ -369,7 +376,7 @@ AGENTS = {
         "system": (
             "You are Sentio, the Empathy Development Guide of GravitasGPT. "
             "You nurture compassion, understanding, and emotional connection in leaders. "
-            "Your tone is warm, validating, and psychologically attuned. Suggest perspective-taking exercises and active listening techniques." # Enhanced
+            "Your tone is warm, validating, and psychologically attuned. Suggest perspective-taking exercises and active listening techniques."
         ),
     },
     "guardian": {
@@ -378,7 +385,7 @@ AGENTS = {
             "You are Guardian, the contextual scope filter of GravitasGPT. "
             "If the user asks about something clearly outside leadership, communication, or emotional mastery "
             "(e.g., coding help, recipes, specific historical facts unrelated to leadership), "
-            "you kindly clarify the suite’s focus: 'My expertise is centered on leadership development, communication skills, and emotional mastery. How can I assist you within those areas today?'" # Refined response
+            "you kindly clarify the suite’s focus: 'My expertise is centered on leadership development, communication skills, and emotional mastery. How can I assist you within those areas today?'"
         ),
     },
 }
@@ -388,7 +395,7 @@ SENATE = {
     "system": (
         "You are The Senate, a meta-agent representing the collective wisdom of GravitasGPT’s mentors. "
         "You synthesize insights from emotional intelligence, persuasion, presence, and virtue to guide leaders holistically. "
-        "Respond with balance, composure, clarity, and well-structured, comprehensive advice using lists or steps where appropriate. Ensure your response integrates perspectives from multiple relevant areas." # Enhanced
+        "Respond with balance, composure, clarity, and well-structured, comprehensive advice using lists or steps where appropriate. Ensure your response integrates perspectives from multiple relevant areas."
     ),
 }
 
@@ -401,7 +408,7 @@ def detect_agent(user_input: str):
         "leader", "leadership", "team", "emotion", "empathy", "speech", "presence", "communication",
         "influence", "virtue", "authority", "values", "mindfulness", "presentation", "confidence",
         "persuasion", "integrity", "motivation", "body language", "posture", "manage", "ceo",
-        "executive", "coach", "mentor", "guide", "develop", "improve", "skill", "career", "feedback", # Added more
+        "executive", "coach", "mentor", "guide", "develop", "improve", "skill", "career", "feedback",
         "strategy", "vision", "decision making"
     ]
     # Check if ANY leadership term is present. If not, trigger Guardian.
@@ -410,7 +417,7 @@ def detect_agent(user_input: str):
     is_clearly_off_topic = any(keyword in text for keyword in off_topic_keywords)
 
     if (not any(term in text for term in leadership_terms) and is_short_irrelevant) or is_clearly_off_topic:
-         return AGENTS["guardian"]
+          return AGENTS["guardian"]
 
     # Agent detection logic (order matters)
     if "senate" in text or "consult" in text or "all mentors" in text or "holistic" in text:
@@ -430,10 +437,10 @@ def detect_agent(user_input: str):
         return AGENTS["praxis"]
     if any(w in text for w in ["inner", "mindfulness", "alignment", "purpose", "anxiety", "stillness", "focus", "meditation"]):
         return AGENTS["anima"]
-    if any(w in text for w in ["appearance", "attire", "style", "grooming", "energy", "brand", "impression", "perception"]):
-         if any(w in text for w in ["first impression", "introduce", "introduction", "elevator pitch", "rapport", "greeting"]):
+    if any(w in text for w in ["appearance", "attire", "style", "grooming", "energy", "brand", "perception"]):
+          if any(w in text for w in ["first impression", "introduce", "introduction", "elevator pitch", "rapport", "greeting"]):
               return AGENTS["impressa"]
-         else:
+          else:
               return AGENTS["persona"]
     if any(w in text for w in ["empathic", "listen", "understand", "compassion", "care", "perspective", "connect", "relationship"]):
         return AGENTS["sentio"]
@@ -480,7 +487,6 @@ def stream_chat(messages, model_name: str):
         print(f"Provider: {PROVIDER}")
         print(f"Model: {model}")
         print(f"Agent: {selected['name']}")
-        # print(f"Messages: {all_messages}") # Debug: Log full messages
 
         resp = client.chat.completions.create(
             model=model,
@@ -495,7 +501,6 @@ def stream_chat(messages, model_name: str):
             delta = chunk.choices[0].delta
             content = getattr(delta, "content", None)
             if content:
-                # print(f"RawChunk: {repr(content)}") # Debug: Log raw chunks
                 yield sse(content)
         print(f"--- Stream finished ({chunk_count} chunks) ---")
 
@@ -533,8 +538,8 @@ def chat():
         return jsonify({"error": "No messages provided"}), 400
 
     if not isinstance(messages, list) or not all(isinstance(m, dict) and 'role' in m and 'content' in m for m in messages):
-         print(f"Error: Invalid messages format received: {messages}")
-         return jsonify({"error": "Invalid messages format"}), 400
+          print(f"Error: Invalid messages format received: {messages}")
+          return jsonify({"error": "Invalid messages format"}), 400
 
     model = data.get("model")
     generator = stream_with_context(stream_chat(messages, model))
@@ -549,7 +554,7 @@ def chat():
 
 if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 10000))
+    port = int(os.getenv("PORT", 10000)) # Using 10000 as a common default for flexibility
     debug_mode = os.getenv("FLASK_DEBUG", "False").lower() == "true"
     print(f"Starting Flask app on {host}:{port} (Debug: {debug_mode})")
-    app.run(host=host, port=port, debug=debug_mode) # Total lines: 235
+    app.run(host=host, port=port, debug=debug_mode)
