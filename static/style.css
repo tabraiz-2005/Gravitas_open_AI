@@ -26,6 +26,8 @@ body {
     height: 100vh;
 }
 
+
+
 /* --- Sidebar --- */
 .sidebar {
     width: 260px;
@@ -374,3 +376,78 @@ body {
 .messages::-webkit-scrollbar-thumb {
     border: 2px solid var(--bg-dark); /* Ensure thumb border matches chat area background */
 }
+
+/* ... (Keep all existing CSS rules) ... */
+
+/* --- Input Container --- */
+.input-container {
+    display: flex;
+    align-items: center;
+    background-color: var(--accent-gold);
+    border-radius: 30px;
+    /* Adjusted padding to accommodate mic button */
+    padding: 5px 5px 5px 10px;
+    margin: 20px auto 10px auto;
+    width: 100%;
+    max-width: 700px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+/* Style for the new Microphone button */
+.input-container .btn-mic {
+    background: none;
+    border: none;
+    color: var(--bg-dark); /* Same color as send button text */
+    font-size: 1.4em; /* Adjust size as needed */
+    cursor: pointer;
+    padding: 8px 10px; /* Adjust padding */
+    margin-right: 5px; /* Space between mic and input */
+    line-height: 1; /* Align icon vertically */
+    transition: color 0.2s ease;
+}
+.input-container .btn-mic:hover {
+    color: #000; /* Darker hover effect */
+}
+/* Style when listening (added via JS) */
+.input-container .btn-mic.listening {
+    color: #D32F2F; /* Red color when active */
+}
+
+
+.input-container input[type="text"] {
+    flex-grow: 1;
+    border: none;
+    background: none;
+    padding: 10px 15px;
+    font-size: 1em;
+    color: var(--bg-dark);
+    outline: none;
+}
+.input-container input[type="text"]::placeholder {
+    color: rgba(31, 63, 74, 0.7);
+}
+
+.input-container .btn-send {
+    background-color: var(--bg-dark);
+    color: var(--accent-gold);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    margin-left: 5px;
+    transition: background-color 0.2s ease;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+.input-container .btn-send:hover {
+     background-color: #2a3f45;
+}
+
+/* ... (Rest of CSS remains unchanged) ... */
