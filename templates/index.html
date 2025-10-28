@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-</head>
+    </head>
 <body>
     <div class="app-container">
         <aside class="sidebar">
@@ -36,16 +36,17 @@
 
         <main class="main-content">
             <header class="main-header">
-                <div></div> <div></div>
+                 <div></div> <div></div>
             </header>
 
             <div class="chat-area">
                 <div id="messages" class="messages">
                      <div class="welcome-message">How can I help you today?</div>
-                     </div>
+                </div>
 
                  <form id="chatForm" class="input-container">
-                    <input type="text" id="messageInput" placeholder="Ask Anything" autocomplete="off">
+                    <button type="button" id="micButton" class="btn-mic" title="Start voice input">🎤</button>
+                    <input type="text" id="messageInput" placeholder="Ask Anything or use Mic" autocomplete="off">
                     <button type="submit" id="sendButton" class="btn-send">&uarr;</button>
                 </form>
             </div>
