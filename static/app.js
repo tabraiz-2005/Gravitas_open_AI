@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let messageHistory = [];
 
     // --- Function to Add Message to UI ---
-    // (No changes needed in this function)
+    // Uses textContent by default, innerHTML only if applyMarkdown is true
     function addMessageToUI(sender, text, applyMarkdown = false) {
         if (welcomeMessage && messagesContainer.children.length <= 1) {
              messagesContainer.style.justifyContent = 'flex-start';
@@ -19,23 +19,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
         messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+
         if (applyMarkdown) {
+            // Apply Markdown AFTER text is complete
             let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-             messageDiv.innerHTML = formattedText;
+            messageDiv.innerHTML = formattedText; // Render Markdown
         } else {
+            // Use textContent during streaming and for user messages
+            // This relies on CSS 'white-space: pre-wrap' for spacing/newlines
             messageDiv.textContent = text;
         }
+
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        return messageDiv;
+        return messageDiv; // Return the created div
     }
 
      // --- Function using Fetch for POST and Stream Processing ---
      async function handleChatStreamWithFetch(history) {
+        // Add placeholder using textContent
         let lastBotMessageDiv = addMessageToUI('bot', '');
         if (!lastBotMessageDiv) return;
-        let currentContent = '';
+
+        let currentContent = ''; // Accumulate raw text
 
         try {
             const response = await fetch('/api/chat', {
@@ -43,10 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages: history })
             });
+
             if (!response.ok) {
                  const errorText = await response.text();
                  throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
             }
+
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -54,39 +63,34 @@ document.addEventListener('DOMContentLoaded', () => {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
+
                 buffer += decoder.decode(value, { stream: true });
                 let lines = buffer.split('\n\n');
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        let data = line.substring(6).trim(); // Get content
-                        // console.log("Raw Chunk:", JSON.stringify(data)); // Keep for debugging
+                        // Get the raw content chunk
+                        const data = line.substring(6); // Don't trim() here, keep original spacing
+                        // console.log("Raw Chunk:", JSON.stringify(data)); // Keep for debugging if needed
 
                          if (data.startsWith("[Error]")) {
-                            currentContent += data;
+                            currentContent += data.trim(); // Trim error message itself
                             lastBotMessageDiv.innerHTML = `<span style="color: #ff5555;">${currentContent}</span>`;
                             throw new Error("Backend Error Received");
                          }
 
-                         if (data.length === 0) continue; // Skip empty chunks
-
-                        // --- AGGRESSIVE SPACING WORKAROUND ---
-                        // Add the chunk, then add a space IF the chunk itself
-                        // doesn't already end in whitespace.
+                        // Append raw chunk directly
                         currentContent += data;
-                        if (!/\s$/.test(data)) { // Check if data chunk ends with whitespace
-                            currentContent += ' '; // Add a space if it doesn't
-                        }
-                        // --- END WORKAROUND ---
-
-                        lastBotMessageDiv.textContent = currentContent; // Update using textContent
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        // Update textContent - Browser + CSS handles spacing/newlines
+                        lastBotMessageDiv.textContent = currentContent;
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Keep scrolling
                     }
                 }
             }
-            // AFTER STREAM: Apply Markdown and clean up potential extra space at end
-            currentContent = currentContent.trim(); // Remove trailing space added by workaround
+
+            // --- AFTER STREAM: Trim final content and apply Markdown ---
+            currentContent = currentContent.trim(); // Clean up potential final whitespace
             if (currentContent.length > 0 && !currentContent.startsWith("[Error]")) {
                 addMessageToUI('assistant', currentContent, true); // Create new div with formatting
                 lastBotMessageDiv.remove(); // Remove the placeholder div
@@ -128,11 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
         await handleChatStreamWithFetch([...messageHistory]);
     }
 
-    // Attach listener to form submission
-    if (chatForm) {
-        chatForm.addEventListener('submit', sendMessage);
-    }
-     // Allow sending with Enter key
+    // Attach listener to form submission & Enter key
+    // (No changes needed here)
+    if (chatForm) { chatForm.addEventListener('submit', sendMessage); }
+    if (messageInput) { /* ... keypress listener ... */ }
      if (messageInput) {
         messageInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -144,5 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
 
 });
